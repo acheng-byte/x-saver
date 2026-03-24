@@ -118,7 +118,7 @@
       const timer = setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          resolve({ success: false, error: '消息超时（' + timeoutMs/1000 + '秒）' });
+          resolve({ success: false, error: _t('content.toast.messageTimeout', { timeout: timeoutMs/1000 }) });
         }
       }, timeoutMs);
       try {
@@ -1590,7 +1590,7 @@
             sendMessageAsync({ action: 'downloadFile', url: m.url, filename: filename })
               .then(result => {
                 if (!result.success) {
-                  downloadErrors.push('图片 ' + (i+1) + ': ' + result.error);
+                  downloadErrors.push(_t('content.toast.imageError', { index: i+1, error: result.error }));
                 }
                 return result;
               })
@@ -1641,14 +1641,14 @@
                 sendMessageAsync({ action: 'downloadFile', url: selectedUrl, filename: filename })
                   .then(result => {
                     if (!result.success) {
-                      downloadErrors.push('视频 ' + (i+1) + ': ' + result.error);
+                      downloadErrors.push(_t('content.toast.videoError', { index: i+1, error: result.error }));
                     }
                     return result;
                   })
               );
             }
           } else {
-            downloadErrors.push('视频 ' + (i+1) + ': 无法获取下载地址');
+            downloadErrors.push(_t('content.toast.videoUrlMissing', { index: i+1 }));
           }
         }
       }
@@ -1690,17 +1690,17 @@
         const allErrors = [...downloadErrors];
         results.forEach((r) => {
           if (r.status !== 'fulfilled' || !r.value?.success) {
-            allErrors.push(r.value?.error || r.reason?.message || '下载失败');
+            allErrors.push(r.value?.error || r.reason?.message || _t('content.toast.downloadFailed'));
           }
         });
-        showToast(allErrors.slice(0, 3).join('; ') || '部分媒体下载失败', 'warning');
+        showToast(allErrors.slice(0, 3).join('; ') || _t('content.toast.downloadPartialFailed'), 'warning');
       }
     } else if (willDownload > 0) {
       // downloads 为空但应该有下载——视频URL全部获取失败
       log('[下载] 异常: 预期下载 ' + willDownload + ' 个文件但 downloads 数组为空');
       showToast(downloadErrors.length > 0
         ? downloadErrors.slice(0, 2).join('; ')
-        : '媒体下载失败', 'warning');
+        : _t('content.toast.mediaFailed'), 'warning');
     }
 
     return downloads.length;

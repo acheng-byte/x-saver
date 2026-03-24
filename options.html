@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X Saver - 设置</title>
+<style>
+/* 默认深色 */
+:root {
+  --bg: #000; --card-bg: #16181c; --text: #e7e9ea; --text-secondary: #71767b;
+  --accent: #1d9bf0; --accent-hover: #1a8cd8; --border: #2f3336;
+  --success: #00ba7c; --error: #f4212e; --warning: #ffd400;
+  --input-bg: #202327; --radius: 12px;
+}
+/* 跟随系统：浅色系统自动切换（JS加载前生效，避免闪烁） */
+@media (prefers-color-scheme: light) {
+  :root:not(.theme-dark) {
+    --bg: #fff; --card-bg: #f7f9f9; --text: #0f1419; --text-secondary: #536471;
+    --accent: #1d9bf0; --accent-hover: #1a8cd8; --border: #eff3f4;
+    --success: #00ba7c; --error: #f4212e; --warning: #f59e0b;
+    --input-bg: #eff3f4;
+  }
+}
+/* 显式深色主题 */
+.theme-dark {
+  --bg: #000; --card-bg: #16181c; --text: #e7e9ea; --text-secondary: #71767b;
+  --accent: #1d9bf0; --accent-hover: #1a8cd8; --border: #2f3336;
+  --success: #00ba7c; --error: #f4212e; --warning: #ffd400;
+  --input-bg: #202327;
+}
+/* 显式浅色主题 */
+.theme-light {
+  --bg: #fff; --card-bg: #f7f9f9; --text: #0f1419; --text-secondary: #536471;
+  --accent: #1d9bf0; --accent-hover: #1a8cd8; --border: #eff3f4;
+  --success: #00ba7c; --error: #f4212e; --warning: #f59e0b;
+  --input-bg: #eff3f4;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; min-height: 100vh; }
+
+.container { max-width: 640px; margin: 0 auto; padding: 20px; }
+
+/* Header */
+.header { text-align: center; padding: 24px 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.header h1 { font-size: 24px; margin-bottom: 4px; }
+.header h1 span { color: var(--accent); }
+.header p { color: var(--text-secondary); font-size: 14px; }
+
+/* Section */
+.section { background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+.section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; cursor: pointer; user-select: none; transition: background 0.2s; }
+.section-header:hover { background: var(--input-bg); }
+.section-header h2 { font-size: 15px; font-weight: 600; }
+.section-header .arrow { color: var(--text-secondary); transition: transform 0.3s; font-size: 12px; }
+.section-header.collapsed .arrow { transform: rotate(-90deg); }
+.section-body { padding: 0 16px 16px; }
+.section-body.hidden { display: none; }
+
+/* Form Elements */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+.field input[type="text"], .field input[type="number"], .field input[type="password"], .field select {
+  width: 100%; padding: 10px 12px; background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field .hint { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+/* Checkbox */
+.checkbox { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; }
+.checkbox input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.checkbox span { font-size: 14px; }
+.checkbox .desc { font-size: 12px; color: var(--text-secondary); margin-left: 28px; margin-top: -4px; }
+
+/* Toggle */
+.toggle { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+.toggle-label { font-size: 14px; font-weight: 500; }
+.toggle-switch { position: relative; width: 44px; height: 24px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--border); border-radius: 24px; transition: 0.3s; }
+.toggle-slider:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: var(--text); border-radius: 50%; transition: 0.3s; }
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+/* Sub-options */
+.sub-options { margin-left: 28px; padding: 8px 0 0; border-left: 2px solid var(--border); padding-left: 16px; }
+
+/* Button */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--input-bg); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-test { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 6px 14px; font-size: 13px; border-radius: 16px; }
+.btn-test:hover { background: rgba(29,155,240,0.1); }
+
+/* Button group */
+.btn-group { display: flex; gap: 10px; padding: 20px 0; justify-content: center; position: sticky; bottom: 0; background: var(--bg); border-top: 1px solid var(--border); margin-top: 8px; }
+
+/* Status */
+.status-msg { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 10px; display: none; }
+.status-msg.success { display: block; background: rgba(0,186,124,0.1); color: var(--success); border: 1px solid rgba(0,186,124,0.3); }
+.status-msg.error { display: block; background: rgba(244,33,46,0.1); color: var(--error); border: 1px solid rgba(244,33,46,0.3); }
+.status-msg.warning { display: block; background: rgba(255,212,0,0.1); color: var(--warning); border: 1px solid rgba(255,212,0,0.3); }
+
+/* Inline group */
+.inline-group { display: flex; gap: 10px; align-items: center; }
+.inline-group input { flex: 1; }
+
+/* Divider */
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+/* Version */
+.version { text-align: center; padding: 16px; color: var(--text-secondary); font-size: 12px; }
+
+/* Section Description */
+.section-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 14px; padding: 8px 12px; background: var(--input-bg); border-radius: 8px; border-left: 3px solid var(--accent); }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container { padding: 12px; }
+  .inline-group { flex-direction: column; gap: 0; }
+  .header h1 { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1><span>X</span> Saver</h1>
+    <p data-i18n="options.header.subtitle">保存推文、Thread、长文章到你的知识库</p>
+  </div>
+
+  <!-- 插件状态 -->
+  <div class="section">
+    <div class="section-header">
+      <h2 data-i18n="options.sections.pluginStatus">插件状态</h2>
+    </div>
+    <div class="section-body">
+      <div class="toggle">
+        <span class="toggle-label" data-i18n="options.pluginStatus.enable">启用插件</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="pluginEnabled" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 外观设置 -->
+  <div class="section">
+    <div class="section-header">
+      <h2 data-i18n="options.sections.appearance">外观</h2>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label data-i18n="options.appearance.theme">主题</label>
+        <select id="theme">
+          <option value="system" data-i18n="options.appearance.themeSystem">跟随系统</option>
+          <option value="light" data-i18n="options.appearance.themeLight">浅色</option>
+          <option value="dark" data-i18n="options.appearance.themeDark">深色</option>
+        </select>
+      </div>
+      <div class="field">
+        <label data-i18n="options.appearance.language">语言 / Language</label>
+        <select id="language">
+          <option value="zh-CN">中文</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保存目标 -->
+  <div class="section">
+    <div class="section-header" data-toggle="targets">
+      <h2 data-i18n="options.sections.targets">保存目标</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="targets">
+      <p class="section-desc" data-i18n="options.targets.desc">选择保存推文的目标平台。可以同时保存到多个目标，保存时会并行处理。</p>
+      <label class="checkbox"><input type="checkbox" id="saveToObsidian" checked><span data-i18n="options.targets.obsidian">保存到 Obsidian</span></label>
+      <label class="checkbox"><input type="checkbox" id="saveToNotion" checked><span data-i18n="options.targets.notion">保存到 Notion Database</span></label>
+      <label class="checkbox"><input type="checkbox" id="saveToFeishu"><span data-i18n="options.targets.feishu">保存到飞书多维表格</span></label>
+      <label class="checkbox"><input type="checkbox" id="exportHtml"><span data-i18n="options.targets.html">导出 HTML 文件</span></label>
+    </div>
+  </div>
+
+  <!-- Obsidian 设置 -->
+  <div class="section">
+    <div class="section-header" data-toggle="obsidian-settings">
+      <h2 data-i18n="options.sections.obsidian">Obsidian 设置</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="obsidian-settings">
+      <p class="section-desc" data-i18n="options.obsidian.desc">通过 Obsidian URI 协议保存笔记。推荐安装 Advanced URI 插件以支持大文件。Vault 名称留空则自动使用当前打开的仓库。</p>
+      <div class="field">
+        <label data-i18n="options.obsidian.vaultLabel">Vault 名称（留空自动使用当前仓库）</label>
+        <input type="text" id="vaultName" data-i18n="options.obsidian.vaultPlaceholder" placeholder="My Vault">
+      </div>
+      <div class="field">
+        <label data-i18n="options.obsidian.folderLabel">保存文件夹</label>
+        <input type="text" id="folderPath" value="X收集箱">
+      </div>
+      <label class="checkbox"><input type="checkbox" id="useAdvancedUri" checked><span data-i18n="options.obsidian.advancedUri">使用 Advanced URI 插件（推荐）</span></label>
+      <p class="hint" style="margin-left:28px;color:var(--text-secondary);font-size:12px;" data-i18n="options.obsidian.advancedUriHint">无文件大小限制，需在 Obsidian 中安装 Advanced URI 插件</p>
+    </div>
+  </div>
+
+  <!-- Notion 设置 -->
+  <div class="section">
+    <div class="section-header" data-toggle="notion-settings">
+      <h2 data-i18n="options.sections.notion">Notion Database 设置</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="notion-settings">
+      <p class="section-desc" data-i18n="options.notion.desc">将推文保存到 Notion Database。需要创建 Integration 并获取 Token，然后将 Integration 连接到目标 Database。属性映射必须与 Database 中的列名完全一致。属性类型要求：标题=Title, 链接=URL, 作者=Rich Text, 标签=Multi Select, 保存日期=Date, 类型=Select, 点赞数/转发数=Number。</p>
+      <div class="field">
+        <label data-i18n="options.notion.tokenLabel">Integration Token</label>
+        <input type="password" id="notionToken" data-i18n="options.notion.tokenPlaceholder" placeholder="secret_xxx...">
+        <p class="hint"><span data-i18n="options.notion.tokenHint">在 Notion Integrations 创建</span> - <a href="https://www.notion.so/profile/integrations" target="_blank" style="color:var(--accent)" data-i18n="options.notion.tokenHintLink">前往创建</a></p>
+      </div>
+      <div class="field">
+        <label data-i18n="options.notion.dbIdLabel">Database ID</label>
+        <input type="text" id="notionDatabaseId" data-i18n="options.notion.dbIdPlaceholder" placeholder="32位 Database ID">
+        <p class="hint" data-i18n="options.notion.dbIdHint">从 Database 链接中复制 32 位 ID</p>
+      </div>
+      <div class="divider"></div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;" data-i18n="options.notion.propMapping">属性映射（必须与 Database 中的列名完全一致）</p>
+      <div class="inline-group">
+        <div class="field" style="flex:1"><label data-i18n="options.notion.propTitle">标题 (Title)</label><input type="text" id="notionPropTitle" value="标题"></div>
+        <div class="field" style="flex:1"><label data-i18n="options.notion.propUrl">链接 (URL)</label><input type="text" id="notionPropUrl" value="链接"></div>
+      </div>
+      <div class="inline-group">
+        <div class="field" style="flex:1"><label data-i18n="options.notion.propAuthor">作者 (Text)</label><input type="text" id="notionPropAuthor" value="作者"></div>
+        <div class="field" style="flex:1"><label data-i18n="options.notion.propTags">标签 (Multi Select)</label><input type="text" id="notionPropTags" value="标签"></div>
+      </div>
+      <div class="inline-group">
+        <div class="field" style="flex:1"><label data-i18n="options.notion.propSavedDate">保存日期 (Date)</label><input type="text" id="notionPropSavedDate" value="保存日期"></div>
+        <div class="field" style="flex:1"><label data-i18n="options.notion.propType">类型 (Select)</label><input type="text" id="notionPropType" value="类型"></div>
+      </div>
+      <div class="inline-group">
+        <div class="field" style="flex:1"><label data-i18n="options.notion.propLikes">点赞数 (Number)</label><input type="text" id="notionPropLikes" value="点赞数"></div>
+        <div class="field" style="flex:1"><label data-i18n="options.notion.propRetweets">转发数 (Number)</label><input type="text" id="notionPropRetweets" value="转发数"></div>
+      </div>
+      <button class="btn-test" id="testNotion" data-i18n="options.notion.testConnection">测试连接</button>
+      <div class="status-msg" id="notionStatus"></div>
+    </div>
+  </div>
+
+  <!-- 飞书设置 -->
+  <div class="section">
+    <div class="section-header" data-toggle="feishu-settings">
+      <h2 data-i18n="options.sections.feishu">飞书多维表格设置</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="feishu-settings">
+      <p class="section-desc" data-i18n="options.feishu.desc">将推文保存到飞书多维表格。需要在飞书开放平台创建应用并获取 App ID/Secret，然后将应用添加为多维表格的协作者。表格需包含：标题(文本)、链接(超链接)、作者(文本)、标签(文本)、保存日期(日期)、类型(单选)等字段。支持上传 Markdown 和 HTML 作为附件。</p>
+      <div class="field">
+        <label data-i18n="options.feishu.apiVersion">API 版本</label>
+        <select id="feishuApiDomain">
+          <option value="feishu" data-i18n="options.feishu.feishuOption">飞书（国内版）</option>
+          <option value="lark" data-i18n="options.feishu.larkOption">Lark（国际版）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label data-i18n="options.feishu.appIdLabel">App ID</label>
+        <input type="text" id="feishuAppId" data-i18n="options.feishu.appIdPlaceholder" placeholder="cli_xxx">
+      </div>
+      <div class="field">
+        <label data-i18n="options.feishu.appSecretLabel">App Secret</label>
+        <input type="password" id="feishuAppSecret" data-i18n="options.feishu.appSecretPlaceholder" placeholder="xxx">
+      </div>
+      <div class="field">
+        <label data-i18n="options.feishu.appTokenLabel">多维表格 app_token</label>
+        <input type="text" id="feishuAppToken" data-i18n="options.feishu.appTokenPlaceholder" placeholder="bascnxxx">
+      </div>
+      <div class="field">
+        <label data-i18n="options.feishu.tableIdLabel">数据表 table_id</label>
+        <input type="text" id="feishuTableId" data-i18n="options.feishu.tableIdPlaceholder" placeholder="tblxxx">
+      </div>
+      <div class="divider"></div>
+      <label class="checkbox"><input type="checkbox" id="feishuUploadAttachment"><span data-i18n="options.feishu.uploadMd">上传 Markdown 附件</span></label>
+      <label class="checkbox"><input type="checkbox" id="feishuUploadHtml"><span data-i18n="options.feishu.uploadHtml">上传 HTML 附件</span></label>
+      <button class="btn-test" id="testFeishu" data-i18n="options.feishu.testConnection">测试连接</button>
+      <div class="status-msg" id="feishuStatus"></div>
+    </div>
+  </div>
+
+  <!-- HTML 导出设置 -->
+  <div class="section">
+    <div class="section-header" data-toggle="html-settings">
+      <h2 data-i18n="options.sections.html">HTML 导出设置</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="html-settings">
+      <p class="section-desc" data-i18n="options.html.desc">将推文导出为离线 HTML 文件，包含完整样式和交互功能。支持 5 种主题切换、代码高亮、图片灯箱、一键复制代码块和表格。</p>
+      <div class="field">
+        <label data-i18n="options.html.folderLabel">导出文件夹（相对于浏览器下载目录）</label>
+        <input type="text" id="htmlExportFolder" value="X导出">
+      </div>
+    </div>
+  </div>
+
+  <!-- 内容设置 -->
+  <div class="section">
+    <div class="section-header" data-toggle="content-settings">
+      <h2 data-i18n="options.sections.content">内容设置</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="content-settings">
+      <p class="section-desc" data-i18n="options.content.desc">控制保存内容的格式和丰富程度。Frontmatter 元数据用于 Obsidian 的属性视图。图片嵌入(Base64)会增加文件大小但可离线查看。链接预览增强会自动为 YouTube/B站/GitHub 等链接生成富媒体嵌入卡片。</p>
+      <label class="checkbox"><input type="checkbox" id="addMetadata" checked><span data-i18n="options.content.addMetadata">添加元数据（Frontmatter）</span></label>
+      <label class="checkbox"><input type="checkbox" id="includeImages" checked><span data-i18n="options.content.includeImages">保留图片链接</span></label>
+      <label class="checkbox"><input type="checkbox" id="embedImages"><span data-i18n="options.content.embedImages">将图片嵌入笔记（Base64）</span></label>
+      <label class="checkbox"><input type="checkbox" id="enableLinkPreview" checked><span data-i18n="options.content.enableLinkPreview">链接预览增强（YouTube/B站/GitHub等自动嵌入）</span></label>
+      <div class="sub-options" id="imageOptions" style="display:none;">
+        <div class="field">
+          <label data-i18n="options.content.imageMaxWidth">图片最大宽度 (px，0=原始尺寸)</label>
+          <input type="number" id="imageMaxWidth" value="1920" min="0" step="100">
+        </div>
+        <div class="field">
+          <label data-i18n="options.content.imageQuality">图片质量 (0.1-1.0)</label>
+          <input type="number" id="imageQuality" value="0.9" min="0.1" max="1.0" step="0.1">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 回复设置 -->
+  <div class="section">
+    <div class="section-header" data-toggle="reply-settings">
+      <h2 data-i18n="options.sections.reply">回复设置</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="reply-settings">
+      <p class="section-desc" data-i18n="options.reply.desc">配置是否保存推文下的回复/评论。可限制保存数量或保存全部。折叠模式使用 HTML details 标签，在 Obsidian 中可折叠展开。</p>
+      <label class="checkbox"><input type="checkbox" id="saveReplies"><span data-i18n="options.reply.saveReplies">保存回复</span></label>
+      <div class="sub-options" id="replyOptions" style="display:none;">
+        <div class="inline-group" style="align-items:flex-end;gap:14px;">
+          <div class="field" style="flex:0 0 120px;">
+            <label data-i18n="options.reply.replyCount">回复数量</label>
+            <input type="number" id="replyCount" value="200" min="1" max="1000">
+          </div>
+          <label class="checkbox" style="flex:0 0 auto;padding-bottom:2px;"><input type="checkbox" id="saveAllReplies"><span data-i18n="options.reply.saveAll">保存全部</span></label>
+        </div>
+        <label class="checkbox"><input type="checkbox" id="foldReplies"><span data-i18n="options.reply.foldReplies">折叠回复（HTML details 标签）</span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 媒体下载设置 -->
+  <div class="section">
+    <div class="section-header" data-toggle="media-settings">
+      <h2 data-i18n="options.sections.media">媒体下载</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="media-settings">
+      <p class="section-desc" data-i18n="options.media.desc">保存推文时自动下载图片和视频到本地。图片默认下载原图(最高清晰度)。视频支持选择清晰度，"每次询问"模式会弹窗让你选择。文件保存到浏览器下载目录的指定子文件夹中。</p>
+      <label class="checkbox"><input type="checkbox" id="autoDownloadImages" checked><span data-i18n="options.media.autoImages">自动下载图片（原图）</span></label>
+      <label class="checkbox"><input type="checkbox" id="autoDownloadVideos" checked><span data-i18n="options.media.autoVideos">自动下载视频</span></label>
+      <div class="sub-options" id="videoOptions" style="display:none;">
+        <div class="field">
+          <label data-i18n="options.media.videoQuality">视频清晰度</label>
+          <select id="videoQuality">
+            <option value="highest" data-i18n="options.media.videoHighest">最高清晰度</option>
+            <option value="lowest" data-i18n="options.media.videoLowest">最低清晰度（省流量）</option>
+            <option value="ask" data-i18n="options.media.videoAsk">每次询问</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label data-i18n="options.media.folderLabel">下载文件夹（相对于浏览器下载目录）</label>
+        <input type="text" id="mediaDownloadFolder" value="X下载附件">
+      </div>
+    </div>
+  </div>
+
+  <!-- 翻译设置 -->
+  <div class="section">
+    <div class="section-header" data-toggle="translation-settings">
+      <h2 data-i18n="options.sections.translation">翻译设置</h2>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="section-body" id="translation-settings">
+      <p class="section-desc" data-i18n="options.translation.desc">自动检测非目标语言的推文并翻译。使用 Google 翻译 API（免费）。追加模式保留原文并在下方添加译文，替换模式直接用译文替换原文。</p>
+      <label class="checkbox"><input type="checkbox" id="enableTranslation"><span data-i18n="options.translation.enable">开启自动翻译（非中文内容翻译为中文）</span></label>
+      <div class="sub-options" id="translationOptions" style="display:none;">
+        <div class="inline-group" style="gap:14px;">
+          <div class="field" style="flex:1;">
+            <label data-i18n="options.translation.targetLang">目标语言</label>
+            <select id="translationTargetLang">
+              <option value="zh-CN" data-i18n="options.translation.langZhCN">简体中文</option>
+              <option value="zh-TW" data-i18n="options.translation.langZhTW">繁体中文</option>
+              <option value="en" data-i18n="options.translation.langEn">英文</option>
+              <option value="ja" data-i18n="options.translation.langJa">日文</option>
+              <option value="ko" data-i18n="options.translation.langKo">韩文</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1;">
+            <label data-i18n="options.translation.mode">翻译模式</label>
+            <select id="translationMode">
+              <option value="append" data-i18n="options.translation.modeAppend">追加译文（保留原文）</option>
+              <option value="replace" data-i18n="options.translation.modeReplace">替换原文</option>
+            </select>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-top:6px;" data-i18n="options.translation.hint">使用 Google 翻译，保存时自动检测非目标语言并翻译</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="btn-group">
+    <button class="btn btn-primary" id="saveBtn" data-i18n="options.buttons.save">保存设置</button>
+    <button class="btn btn-secondary" id="resetBtn" data-i18n="options.buttons.reset">恢复默认</button>
+  </div>
+  <div class="status-msg" id="saveStatus"></div>
+
+  <!-- 版本信息 -->
+  <div class="version" data-i18n="options.version">
+    X Saver V1.0.0 | 单击书签按钮保存 | 双击触发原生书签 | 快捷键 Ctrl+Shift+S
+  </div>
+
+</div>
+
+<script src="i18n.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

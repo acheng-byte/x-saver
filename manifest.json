@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "X Saver",
+  "version": "1.1.1",
+  "description": "保存 X (Twitter) 推文、Thread、长文章到 Obsidian/Notion/飞书，支持视频/图片下载",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "downloads",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://mobile.x.com/*",
+    "https://mobile.twitter.com/*",
+    "https://api.notion.com/*",
+    "https://open.feishu.cn/*",
+    "https://open.larksuite.com/*",
+    "https://pbs.twimg.com/*",
+    "https://video.twimg.com/*",
+    "https://abs.twimg.com/*",
+    "https://translate.googleapis.com/*",
+    "https://opengraph.githubassets.com/*"
+  ],
+  "commands": {
+    "save-tweet": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "MacCtrl+Shift+S"
+      },
+      "description": "Save current tweet / 保存当前推文"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "https://mobile.x.com/*",
+        "https://mobile.twitter.com/*"
+      ],
+      "js": ["detector.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "options_page": "options.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/turndown.min.js", "lib/marked.min.js", "styles/content.css", "i18n.js"],
+      "matches": ["https://x.com/*", "https://twitter.com/*"]
+    }
+  ]
+}

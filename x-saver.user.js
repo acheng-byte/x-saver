@@ -397,7 +397,7 @@
       const quote   = extractQuote(articleEl);
       const article = extractArticle(articleEl);
       const isReply = !!articleEl.closest('[aria-label*="Reply"]')
-                   || articleEl.getAttribute('data-is-reply') === 'true';
+                   || Array.from(articleEl.querySelectorAll('span')).some(s => s.textContent.trim() === 'Replying to');
 
       if (!text && images.length === 0 && !hasVideo && !article && !poll && !quote) return null;
 
@@ -445,7 +445,7 @@
       if (!article) return '';
       let md = '\n> 📄 **Twitter Article**\n';
       if (article.url) md += `> [阅读全文](${article.url})\n`;
-      if (article.text) md += '\n' + article.text + '\n';
+      if (article.text) md += '\n' + article.text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)') + '\n';
       return md + '\n';
     }
 
@@ -458,7 +458,7 @@
         if (c.time) md += ` · ${UtilModule.formatDate(c.time)}`;
         if (c.likes) md += ` · ❤️ ${c.likes}`;
         md += '\n\n';
-        if (c.text) md += c.text + '\n\n';
+        if (c.text) md += c.text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)') + '\n\n';
         if (c.imgCount > 0) md += `_(含 ${c.imgCount} 张图片)_\n\n`;
       });
       return md;
@@ -1180,7 +1180,7 @@
       injectStyles();
       setTimeout(processArticles, 1200);
       observeDOM();
-      LogModule.log('info', 'X Saver v2.1.0 已启动');
+      LogModule.log('info', 'X Saver v0.0.5 已启动');
     }
 
     return { init, showSettings };

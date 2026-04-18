@@ -21,6 +21,7 @@
   "feishuFieldComments": "评论",
   "imageMode": "link",
   "videoMode": "iframe",
+  "iframeHeight": "480",
   "serverEndpoint": "https://media.acheng.eu.cc/download",
   "serverToken": "36fce70c0e32402564b7aa404ac09f6b867305ac859a4334bf1696fc238944d1",
   "serverMediaFolder": "X媒体",

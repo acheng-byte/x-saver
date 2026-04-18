@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X Saver · 推文保存工具
 // @namespace    https://github.com/acheng-byte
-// @version      0.0.4
+// @version      0.0.5
 // @description  X平台一键保存推文到Obsidian+飞书 · 总开关/投票/引用/长文/标签多选/评论/视频URL
 // @author       阿成
 // @homepageURL  https://github.com/acheng-byte
@@ -419,7 +419,7 @@
 
     function tweetIframe(tweetId) {
       const src = `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&dnt=true`;
-      return `\n<iframe src="${src}" style="border:none;width:100%;min-height:500px;border-radius:12px;" allowfullscreen loading="lazy"></iframe>\n`;
+      return `\n<iframe src="${src}" style="border:none;width:100%;aspect-ratio:16/9;border-radius:12px;" allowfullscreen loading="lazy"></iframe>\n`;
     }
 
     // 投票 → Markdown 表格
@@ -471,27 +471,27 @@
 
       const lines = ['---'];
       const m = cfg;
-      if (m.meta_author   && (data.displayName||data.handle)) lines.push(`author: ${ys(`${data.displayName} (@${data.handle})`)}`);
-      if (m.meta_handle   && data.handle)      lines.push(`handle: ${ys('@' + data.handle)}`);
-      if (m.meta_url      && data.tweetUrl)    lines.push(`url: ${ys(data.tweetUrl)}`);
-      if (m.meta_tweet_id && data.tweetId)     lines.push(`tweet_id: ${ys(data.tweetId)}`);
-      if (m.meta_time     && data.tweetTime)   lines.push(`tweet_time: ${ys(UtilModule.formatDate(data.tweetTime))}`);
-      if (m.meta_saved)                         lines.push(`saved: ${ys(UtilModule.getBeijingTime())}`);
-      if (m.meta_likes    && data.likes)       lines.push(`likes: "${data.likes}"`);
-      if (m.meta_retweets && data.retweets)    lines.push(`retweets: "${data.retweets}"`);
-      if (m.meta_replies  && data.replies)     lines.push(`replies: "${data.replies}"`);
-      if (m.meta_views    && data.views)       lines.push(`views: "${data.views}"`);
-      if (m.meta_bookmarks&& data.bookmarks)   lines.push(`bookmarks: "${data.bookmarks}"`);
+      if (m.meta_author   && (data.displayName||data.handle)) lines.push(`作者: ${ys(`${data.displayName} (@${data.handle})`)}`);
+      if (m.meta_handle   && data.handle)      lines.push(`账号: ${ys('@' + data.handle)}`);
+      if (m.meta_url      && data.tweetUrl)    lines.push(`链接: ${ys(data.tweetUrl)}`);
+      if (m.meta_tweet_id && data.tweetId)     lines.push(`推文ID: ${ys(data.tweetId)}`);
+      if (m.meta_time     && data.tweetTime)   lines.push(`发布时间: ${ys(UtilModule.formatDate(data.tweetTime))}`);
+      if (m.meta_saved)                         lines.push(`保存时间: ${ys(UtilModule.getBeijingTime())}`);
+      if (m.meta_likes    && data.likes)       lines.push(`点赞: "${data.likes}"`);
+      if (m.meta_retweets && data.retweets)    lines.push(`转发: "${data.retweets}"`);
+      if (m.meta_replies  && data.replies)     lines.push(`回复: "${data.replies}"`);
+      if (m.meta_views    && data.views)       lines.push(`浏览: "${data.views}"`);
+      if (m.meta_bookmarks&& data.bookmarks)   lines.push(`收藏: "${data.bookmarks}"`);
       if (m.meta_hashtags && data.hashtags.length) lines.push(`tags: [${data.hashtags.map(t=>ys(t)).join(', ')}]`);
-      if (m.meta_mentions && data.mentions.length) lines.push(`mentions: [${data.mentions.map(t=>ys(t)).join(', ')}]`);
-      if (m.meta_cashtags && data.cashtags.length) lines.push(`cashtags: [${data.cashtags.map(t=>ys(t)).join(', ')}]`);
-      if (m.meta_has_video&& data.hasVideo)    lines.push(`has_video: true`);
-      if (m.meta_has_poll && data.poll)        lines.push(`has_poll: true`);
-      if (m.meta_is_reply && data.isReply)     lines.push(`is_reply: true`);
-      if (m.meta_is_quote && data.quote)       lines.push(`is_quote: true`);
+      if (m.meta_mentions && data.mentions.length) lines.push(`提及: [${data.mentions.map(t=>ys(t)).join(', ')}]`);
+      if (m.meta_cashtags && data.cashtags.length) lines.push(`股票代码: [${data.cashtags.map(t=>ys(t)).join(', ')}]`);
+      if (m.meta_has_video&& data.hasVideo)    lines.push(`含视频: true`);
+      if (m.meta_has_poll && data.poll)        lines.push(`含投票: true`);
+      if (m.meta_is_reply && data.isReply)     lines.push(`是回复: true`);
+      if (m.meta_is_quote && data.quote)       lines.push(`是引用: true`);
       if (m.meta_type) {
-        const t = data.quote ? 'quote' : data.isReply ? 'reply' : 'tweet';
-        lines.push(`type: "${t}"`);
+        const t = data.quote ? '引用' : data.isReply ? '回复' : '推文';
+        lines.push(`类型: "${t}"`);
       }
       lines.push('---\n');
       return lines.join('\n');
@@ -500,7 +500,7 @@
     function toMarkdown(data, cfg, localImagePaths, comments) {
       let md = frontmatter(data, cfg);
 
-      if (data.text) md += data.text + '\n\n';
+      if (data.text) md += data.text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)') + '\n\n';
       if (data.article) md += articleMd(data.article);
 
       // 视频
@@ -548,14 +548,17 @@
             return new Date(dt.getTime() + (dt.getTimezoneOffset() + 480) * 60000).toISOString().substring(0, 10);
           })()
         : UtilModule.getBeijingTime().substring(0, 10);
-      // 先剥离 emoji 和特殊 Unicode，再交给 sanitizeFileName 统一处理
+      // 先剥离 emoji、URL 和特殊 Unicode，再交给 sanitizeFileName 统一处理
       const raw = (data.text || data.handle || 'tweet')
+        .replace(/https?:\/\/\S+/g, '')
         .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
         .replace(/[\u{2600}-\u{27BF}]/gu, '')
         .replace(/[\n\r]+/g, ' ')
         .trim()
-        .substring(0, 30);
-      return UtilModule.sanitizeFileName(`${d} @${data.handle || 'unknown'} ${raw}`);
+        .substring(0, 20);
+      const prefix = `${d} @${data.handle || 'unknown'} `;
+      const snippet = raw.substring(0, Math.max(0, 50 - prefix.length));
+      return UtilModule.sanitizeFileName(prefix + snippet);
     }
 
     return { toMarkdown, toFileName };
@@ -683,11 +686,13 @@
       const fp = `${cfg.folderPath||'X收集箱'}/${fileName}.md`;
       let uri;
       if (cfg.useAdvancedUri) {
-        const p = new URLSearchParams({ vault: cfg.vaultName||'', filepath: fp, mode: 'overwrite', clipboard: 'true' });
-        uri = `obsidian://adv-uri?${p}`;
+        const vault = encodeURIComponent(cfg.vaultName || '');
+        const filepath = encodeURIComponent(fp);
+        uri = `obsidian://adv-uri?vault=${vault}&filepath=${filepath}&mode=overwrite&clipboard=true`;
       } else {
-        const p = new URLSearchParams({ vault: cfg.vaultName||'', file: fp.replace(/\.md$/,''), content: markdown });
-        uri = `obsidian://new?${p}`;
+        const vault = encodeURIComponent(cfg.vaultName || '');
+        const file = encodeURIComponent(fp.replace(/\.md$/, ''));
+        uri = `obsidian://new?vault=${vault}&file=${file}`;
       }
       window.location.href = uri;
     }
@@ -1079,8 +1084,9 @@
             const fn   = LogModule.getHistory()[idx]?.fileName;
             if (fn) {
               const fp = `${cfg.folderPath || 'X收集箱'}/${fn}.md`;
-              const p  = new URLSearchParams({ vault: cfg.vaultName || '', file: fp.replace(/\.md$/, '') });
-              window.open(`obsidian://open?${p}`);
+              const vault = encodeURIComponent(cfg.vaultName || '');
+              const file = encodeURIComponent(fp.replace(/\.md$/, ''));
+              window.open(`obsidian://open?vault=${vault}&file=${file}`);
             }
           }
           if (delBtn) {

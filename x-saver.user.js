@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X Saver · 推文保存工具
 // @namespace    https://github.com/acheng-byte
-// @version      0.0.5
+// @version      0.0.6
 // @description  X平台一键保存推文到Obsidian+飞书 · 总开关/投票/引用/长文/标签多选/评论/视频URL
 // @author       阿成
 // @homepageURL  https://github.com/acheng-byte
@@ -211,6 +211,8 @@
       feishuFieldVideo:     '视频URL',
       feishuFieldTags:      '标签',
       feishuFieldComments:  '评论',
+      feishuFieldMd:        '笔记文件',
+      feishuUploadMd:       false,   // 是否上传 MD 文档为附件
 
       // 媒体
       imageMode:         'link',   // link | download
@@ -697,10 +699,43 @@
       });
     }
 
+    async function uploadMdToFeishu(token, base, appToken, fileName, content) {
+      const bytes = new TextEncoder().encode(content);
+      const blob  = new Blob([bytes], { type: 'text/markdown' });
+      const form  = new FormData();
+      form.append('file_name',    `${fileName}.md`);
+      form.append('parent_type',  'bitable_file');
+      form.append('parent_node',  appToken);
+      form.append('size',         String(bytes.length));
+      form.append('file',         blob, `${fileName}.md`);
+
+      return new Promise((resolve, reject) => {
+        GM_xmlhttpRequest({
+          method:  'POST',
+          url:     `${base}/open-apis/drive/v1/medias/upload_all`,
+          headers: { 'Authorization': `Bearer ${token}` }, // 不设 Content-Type，让浏览器自动生成 boundary
+          data:    form,
+          timeout: 30000,
+          onload:  r => {
+            try {
+              const d = JSON.parse(r.responseText);
+              d.code === 0 ? resolve(d.data.file_token) : reject(new Error(`MD上传: ${d.msg}`));
+            } catch (e) { reject(e); }
+          },
+          onerror:   () => reject(new Error('MD上传网络错误')),
+          ontimeout: () => reject(new Error('MD上传超时')),
+        });
+      });
+    }
+
     async function saveToFeishu(data, markdown, comments, cfg) {
       if (!cfg.feishuAppId || !cfg.feishuAppSecret || !cfg.feishuAppToken || !cfg.feishuTableId) {
-        throw new Error('飞书配置不完整');
+        throw new Error('飞书配置不完整（需填写 AppID / AppSecret / AppToken / TableID）');
       }
+      if (cfg.feishuUploadMd && !cfg.feishuFieldMd) {
+        throw new Error('已开启「上传MD附件」但附件字段名为空，请在飞书设置中填写');
+      }
+
       const token = await getFeishuToken(cfg.feishuAppId, cfg.feishuAppSecret, cfg.feishuApiDomain);
       const base  = cfg.feishuApiDomain === 'larksuite' ? 'https://open.larksuite.com' : 'https://open.feishu.cn';
       const f     = (key, fb) => cfg[key] || fb;
@@ -708,7 +743,7 @@
       const fields = {};
       fields[f('feishuFieldContent',   '内容')]    = markdown;
       fields[f('feishuFieldUrl',       '链接')]    = data.tweetUrl;
-      // 作者 = 显示名（单选字段，飞书单选传字符串），账号 = @handle（文本字段）
+      // 作者 = 显示名（文本字段），账号 = @handle（文本字段）
       fields[f('feishuFieldAuthor',    '作者')]    = data.displayName || `@${data.handle}`;
       fields[f('feishuFieldHandle',    '账号')]    = `@${data.handle}`;
       if (data.tweetTime) fields[f('feishuFieldTime', '发布时间')] = new Date(data.tweetTime).getTime();
@@ -753,7 +788,8 @@
         });
       });
 
-      return new Promise((resolve, reject) => {
+      // 创建或更新记录，取回 record_id 供后续附件上传
+      const recordId = await new Promise((resolve, reject) => {
         const isUpdate = !!existingId;
         GM_xmlhttpRequest({
           method: isUpdate ? 'PUT' : 'POST',
@@ -764,13 +800,47 @@
           data: JSON.stringify({ fields }),
           timeout: 15000,
           onload: r => {
-            try { const d = JSON.parse(r.responseText); d.code === 0 ? resolve(d) : reject(new Error(`飞书: ${d.msg}`)); }
-            catch (e) { reject(e); }
+            try {
+              const d = JSON.parse(r.responseText);
+              d.code === 0
+                ? resolve(d.data?.record?.record_id || existingId)
+                : reject(new Error(`飞书: ${d.msg}`));
+            } catch (e) { reject(e); }
           },
-          onerror: () => reject(new Error('飞书网络错误')),
+          onerror:   () => reject(new Error('飞书网络错误')),
           ontimeout: () => reject(new Error('飞书超时')),
         });
       });
+
+      // 上传 MD 附件（可选）
+      if (cfg.feishuUploadMd && recordId) {
+        try {
+          const fileName  = ConvertModule.toFileName(data);
+          const fileToken = await uploadMdToFeishu(token, base, cfg.feishuAppToken, fileName, markdown);
+          const mdField   = f('feishuFieldMd', '笔记文件');
+          await new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+              method:  'PUT',
+              url:     `${base}/open-apis/bitable/v1/apps/${cfg.feishuAppToken}/tables/${cfg.feishuTableId}/records/${recordId}`,
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              data:    JSON.stringify({ fields: { [mdField]: [{ file_token: fileToken }] } }),
+              timeout: 10000,
+              onload:  r => {
+                try { const d = JSON.parse(r.responseText); d.code === 0 ? resolve() : reject(new Error(`附件更新: ${d.msg}`)); }
+                catch (e) { reject(e); }
+              },
+              onerror:   () => reject(new Error('附件更新网络错误')),
+              ontimeout: () => reject(new Error('附件更新超时')),
+            });
+          });
+          LogModule.log('info', 'MD附件上传成功', fileName);
+        } catch (e) {
+          LogModule.log('warn', 'MD附件上传失败（记录已保存）', e.message);
+          UtilModule.showNotification(`MD附件: ${e.message}`, 'warning');
+        }
+      }
+
+      return recordId;
     }
 
     function saveToObsidian(markdown, fileName, cfg) {
@@ -1008,7 +1078,7 @@
 
       panel.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:17px;font-weight:700;">X Saver v0.0.4</span>
+          <span style="font-size:17px;font-weight:700;">X Saver v0.0.6</span>
           <span id="xs-close" style="cursor:pointer;font-size:24px;opacity:.5;line-height:1;">×</span>
         </div>
         ${!enabled ? `<div class="xs-disabled-banner">⚠️ 脚本已禁用，点击"总开关"重新启用</div>` : ''}
@@ -1063,7 +1133,7 @@
           <div class="xs-tip" style="margin-top:12px;padding:10px;background:${isDark?'#2d3748':'#f0f9ff'};border-radius:8px;line-height:1.6;">
             <strong>Obsidian 渲染说明</strong><br>
             • 视频：iframe 嵌入，阅读模式直接播放<br>
-            • 图片：外链模式直接显示；下载模式用 <code>![[本地路径]]</code><br>
+            • 图片：外链模式直接引用 X CDN；下载模式引用服务器 URL<br>
             • 投票：渲染为 Markdown 表格<br>
             • 引用推文：渲染为块引用（>&gt;）<br>
             • 标签：以 #tag 格式显示在正文末<br>
@@ -1092,6 +1162,9 @@
           ${T('视频URL','feishuFieldVideo','text','视频URL')}
           ${T('标签（多选字段）','feishuFieldTags','text','标签')}
           ${T('评论','feishuFieldComments','text','评论')}
+          <div class="xs-sec">MD 附件</div>
+          ${C('上传 MD 文档为附件','feishuUploadMd','需在多维表格中预先创建「附件」类型的列')}
+          ${T('附件字段名','feishuFieldMd','text','笔记文件','多维表格中「附件」类型列的列名，与上方字段名一致')}
           <div style="margin-top:12px;">
             <button class="xs-btn xs-sec2" id="xs-test-feishu">测试飞书连接</button>
           </div>
@@ -1287,7 +1360,7 @@
       injectStyles();
       setTimeout(processArticles, 1200);
       observeDOM();
-      LogModule.log('info', 'X Saver v0.0.5 已启动');
+      LogModule.log('info', 'X Saver v0.0.6 已启动');
     }
 
     return { init, showSettings };

@@ -87,7 +87,100 @@
   })();
 
   // ============================================================
-  // 模块1: 配置管理 (ConfigModule)
+  // 模块1: GraphQL 拦截缓存 (GraphQLModule)
+  // ============================================================
+  const GraphQLModule = (function () {
+    // tweetId → reply[]
+    const _cache = new Map();
+
+    function _parseTweetResult(r) {
+      if (!r) return null;
+      // TweetWithVisibilityResults 包一层
+      const t = r.__typename === 'TweetWithVisibilityResults' ? r.tweet : r;
+      const leg = t?.legacy;
+      const uleg = t?.core?.user_results?.result?.legacy;
+      if (!leg || !uleg) return null;
+
+      const images = [];
+      (leg.extended_entities?.media || leg.entities?.media || []).forEach(m => {
+        if (m.type === 'photo') images.push(m.media_url_https + ':large');
+      });
+
+      // 剔除推文末尾的 t.co 短链（引用/媒体占位符）
+      const text = (leg.full_text || '').replace(/\s*https:\/\/t\.co\/\S+\s*$/g, '').trim();
+
+      return {
+        tweetId:     leg.id_str,
+        handle:      uleg.screen_name || '',
+        displayName: uleg.name || '',
+        text,
+        time:     leg.created_at || '',
+        likes:    String(leg.favorite_count  || ''),
+        retweets: String(leg.retweet_count   || ''),
+        replies:  String(leg.reply_count     || ''),
+        imgCount: images.length,
+        images,
+      };
+    }
+
+    function _parseAndCache(json, focalId) {
+      const instructions =
+        json?.data?.threaded_conversation_with_injections_v2?.instructions || [];
+      const replies = [];
+
+      for (const inst of instructions) {
+        if (inst.type !== 'TimelineAddEntries') continue;
+        for (const entry of (inst.entries || [])) {
+          const eid = entry.entryId || '';
+          if (!eid.startsWith('conversationthread-')) continue;
+          for (const item of (entry.content?.items || [])) {
+            const tr = item.item?.itemContent?.tweet_results?.result;
+            const reply = _parseTweetResult(tr);
+            if (reply && reply.tweetId !== focalId) replies.push(reply);
+          }
+        }
+      }
+
+      if (replies.length > 0) {
+        const existing = _cache.get(focalId) || [];
+        const merged = [...existing];
+        replies.forEach(r => { if (!merged.find(e => e.tweetId === r.tweetId)) merged.push(r); });
+        _cache.set(focalId, merged);
+      }
+      return replies.length;
+    }
+
+    // 拦截 X 的 fetch，监听 TweetDetail 响应
+    ;(function () {
+      const _origFetch = window.fetch;
+      window.fetch = async function (...args) {
+        const res = await _origFetch.apply(this, args);
+        const url = (typeof args[0] === 'string' ? args[0] : args[0]?.url) || '';
+        if (url.includes('TweetDetail')) {
+          res.clone().json().then(json => {
+            try {
+              const vars = JSON.parse(new URL(url, 'https://x.com').searchParams.get('variables') || '{}');
+              const focalId = vars.focalTweetId;
+              if (focalId) _parseAndCache(json, focalId);
+            } catch (_) {}
+          }).catch(() => {});
+        }
+        return res;
+      };
+    })();
+
+    function getComments(tweetId, maxCount) {
+      return (_cache.get(tweetId) || []).slice(0, maxCount || 200);
+    }
+    function hasCached(tweetId) {
+      return (_cache.get(tweetId) || []).length > 0;
+    }
+
+    return { getComments, hasCached };
+  })();
+
+  // ============================================================
+  // 模块2: 配置管理 (ConfigModule)
   // ============================================================
   const ConfigModule = (function () {
     const D = {
@@ -705,13 +798,19 @@
         return;
       }
 
-      // 评论提取（仅单推文页有效）
+      // 评论提取：优先用 GraphQL 缓存，回退到 DOM
       let comments = null;
       if (cfg.saveComments) {
         const count = parseInt(cfg.commentCount) || 100;
-        const found = ExtractModule.extractComments(count);
-        comments = found.length > 0 ? found : null;
-        if (found.length === 0) LogModule.log('info', '未找到评论（请在单推文页使用）');
+        if (data.tweetId && GraphQLModule.hasCached(data.tweetId)) {
+          const cached = GraphQLModule.getComments(data.tweetId, count);
+          comments = cached.length > 0 ? cached : null;
+          LogModule.log('info', `GraphQL评论: ${cached.length} 条`, data.tweetUrl);
+        } else {
+          const found = ExtractModule.extractComments(count);
+          comments = found.length > 0 ? found : null;
+          if (found.length === 0) LogModule.log('info', '未找到评论（请在单推文页使用）');
+        }
       }
 
       // 图片下载

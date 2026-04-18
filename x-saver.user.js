@@ -642,29 +642,15 @@
     }
 
     function toFileName(data) {
-      const LIMIT = 60;
-      const raw = (data.text || data.handle || 'tweet')
-        .replace(/https?:\/\/\S+/g, '')
-        .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-        .replace(/[\u{2600}-\u{27BF}]/gu, '')
-        .replace(/[\n\r]+/g, ' ')
-        .trim();
-
-      let title = raw;
-      if (raw.length > LIMIT) {
-        // 1. 优先在句末标点截断（中英文）
-        const seg = raw.substring(0, LIMIT);
-        const sentenceMatch = seg.match(/^([\s\S]*[。！？…\.!\?])/);
-        if (sentenceMatch && sentenceMatch[1].length >= LIMIT / 2) {
-          title = sentenceMatch[1].trim();
-        } else {
-          // 2. 其次在最后一个空格截断（英文词边界）
-          const lastSpace = seg.lastIndexOf(' ');
-          title = lastSpace >= LIMIT / 2 ? seg.substring(0, lastSpace) : seg;
-        }
-      }
-
-      return UtilModule.sanitizeFileName(title || data.handle || 'tweet');
+      // 格式：YYYY-MM-DD @handle（北京时间发布日期 + 作者账号）
+      const d = data.tweetTime
+        ? (() => {
+            const dt = new Date(data.tweetTime);
+            return new Date(dt.getTime() + (dt.getTimezoneOffset() + 480) * 60000).toISOString().substring(0, 10);
+          })()
+        : UtilModule.getBeijingTime().substring(0, 10);
+      const handle = data.handle || 'unknown';
+      return UtilModule.sanitizeFileName(`${d} @${handle}`);
     }
 
     return { toMarkdown, toFileName };

@@ -555,7 +555,7 @@
       if (!comments?.length) return '';
       let md = `\n---\n\n## 💬 评论（共 ${comments.length} 条）\n\n`;
       comments.forEach(c => {
-        md += `---\n\n**@${c.handle}**`;
+        md += `---\n\n**[@${c.handle}](https://x.com/${c.handle})**`;
         if (c.time) md += ` · ${UtilModule.formatDate(c.time)}`;
         if (c.likes) md += ` · ❤️ ${c.likes}`;
         md += '\n\n';

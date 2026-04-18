@@ -611,13 +611,12 @@
         }
       }
 
-      // 图片 —— 下载模式用本地路径，否则外链
+      // 图片 —— 下载模式用服务器 URL，否则 X 外链
       if (data.images.length > 0) {
-        if (cfg.imageMode === 'download' && localImagePaths?.length > 0) {
-          localImagePaths.forEach(p => { md += `![[${p}]]\n\n`; });
-        } else {
-          data.images.forEach((url, i) => { md += `![图片${i+1}](${url})\n\n`; });
-        }
+        const imgSources = (cfg.imageMode === 'download' && localImagePaths?.length > 0)
+          ? localImagePaths
+          : data.images;
+        imgSources.forEach((url, i) => { md += `![图片${i+1}](${url})\n\n`; });
       }
 
       if (data.poll)  md += pollMd(data.poll);
@@ -812,14 +811,21 @@
         }
       }
 
-      // 图片下载
+      // 图片下载（到媒体服务器）
       let localPaths = null;
       if (cfg.imageMode === 'download' && data.images.length > 0) {
-        UtilModule.showNotification(`正在下载 ${data.images.length} 张图片...`, 'info');
-        try { localPaths = await downloadImages(data, cfg); }
-        catch (e) {
-          LogModule.log('warn', '图片下载失败', e.message);
-          UtilModule.showNotification('图片下载失败，已降级为外链', 'warning');
+        UtilModule.showNotification(`正在上传 ${data.images.length} 张图片到媒体服务器...`, 'info');
+        try {
+          localPaths = await downloadImages(data, cfg);
+          if (localPaths.length > 0) {
+            LogModule.log('info', `图片已保存到服务器 (${localPaths.length}张)`, localPaths[0]);
+          } else {
+            UtilModule.showNotification('图片上传失败，已降级为外链', 'warning');
+            LogModule.log('warn', '图片上传返回空路径，检查服务器日志');
+          }
+        } catch (e) {
+          LogModule.log('warn', '图片上传失败', e.message);
+          UtilModule.showNotification('图片上传失败，已降级为外链', 'warning');
         }
       }
 

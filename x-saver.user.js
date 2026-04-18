@@ -42,7 +42,7 @@
       const bj  = new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
       return bj.toISOString().replace('T', ' ').substring(0, 19);
     }
-    function _getArr(key, max) {
+    function _getArr(key) {
       try { return JSON.parse(GM_getValue(key, '[]')); } catch { return []; }
     }
     function _setArr(key, arr, max) {
@@ -182,6 +182,7 @@
   // ============================================================
   // 模块2: 配置管理 (ConfigModule)
   // ============================================================
+  // ============================================================
   const ConfigModule = (function () {
     const D = {
       // 保存目标
@@ -268,7 +269,7 @@
   })();
 
   // ============================================================
-  // 模块2: 工具函数 (UtilModule)
+  // 模块3: 工具函数 (UtilModule)
   // ============================================================
   const UtilModule = (function () {
     function getBeijingTime() {
@@ -320,11 +321,15 @@
       _t = setTimeout(() => d.parentNode && d.remove(), 3000);
     }
 
-    return { getBeijingTime, sanitizeFileName, extractTweetId, formatDate, showNotification };
+    function linkifyUrls(text) {
+      return (text || '').replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)');
+    }
+
+    return { getBeijingTime, sanitizeFileName, extractTweetId, formatDate, showNotification, linkifyUrls };
   })();
 
   // ============================================================
-  // 模块3: 内容提取 (ExtractModule)
+  // 模块4: 内容提取 (ExtractModule)
   // ============================================================
   const ExtractModule = (function () {
 
@@ -397,8 +402,9 @@
       return urls;
     }
 
-    // 提取评论（当前页面可见的回复）
+    // 提取评论（仅单推文详情页有效）
     function extractComments(maxCount = 100) {
+      if (!window.location.pathname.includes('/status/')) return [];
       const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
       // 单推文页：第一篇是主推，其余是回复
       const replyArticles = articles.slice(1, maxCount + 1);
@@ -506,7 +512,7 @@
   })();
 
   // ============================================================
-  // 模块4: Markdown 转换 (ConvertModule)
+  // 模块5: Markdown 转换 (ConvertModule)
   // ============================================================
   const ConvertModule = (function () {
 
@@ -528,7 +534,7 @@
     function quoteMd(quote) {
       if (!quote) return '';
       let md = `\n> **[@${quote.handle}](https://x.com/${quote.handle})**\n`;
-      if (quote.text) quote.text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)').split('\n').forEach(l => { md += `> ${l}\n`; });
+      if (quote.text) UtilModule.linkifyUrls(quote.text).split('\n').forEach(l => { md += `> ${l}\n`; });
       if (quote.url) md += `>\n> [查看原推](${quote.url})\n`;
       return md + '\n';
     }
@@ -538,7 +544,7 @@
       if (!article) return '';
       let md = '\n> 📄 **Twitter Article**\n';
       if (article.url) md += `> [阅读全文](${article.url})\n`;
-      if (article.text) md += '\n' + article.text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)') + '\n';
+      if (article.text) md += '\n' + UtilModule.linkifyUrls(article.text) + '\n';
       return md + '\n';
     }
 
@@ -551,7 +557,7 @@
         if (c.time) md += ` · ${UtilModule.formatDate(c.time)}`;
         if (c.likes) md += ` · ❤️ ${c.likes}`;
         md += '\n\n';
-        if (c.text) md += c.text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)') + '\n\n';
+        if (c.text) md += UtilModule.linkifyUrls(c.text) + '\n\n';
         if (c.imgCount > 0) md += `_(含 ${c.imgCount} 张图片)_\n\n`;
       });
       return md;
@@ -593,7 +599,7 @@
     function toMarkdown(data, cfg, localImagePaths, comments) {
       let md = frontmatter(data, cfg);
 
-      if (data.text) md += data.text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)') + '\n\n';
+      if (data.text) md += UtilModule.linkifyUrls(data.text) + '\n\n';
       if (data.article) md += articleMd(data.article);
 
       // 视频
@@ -635,13 +641,6 @@
     }
 
     function toFileName(data) {
-      const d = data.tweetTime
-        ? (() => {
-            const dt = new Date(data.tweetTime);
-            return new Date(dt.getTime() + (dt.getTimezoneOffset() + 480) * 60000).toISOString().substring(0, 10);
-          })()
-        : UtilModule.getBeijingTime().substring(0, 10);
-      // 先剥离 emoji、URL 和特殊 Unicode，再交给 sanitizeFileName 统一处理
       const raw = (data.text || data.handle || 'tweet')
         .replace(/https?:\/\/\S+/g, '')
         .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
@@ -656,7 +655,7 @@
   })();
 
   // ============================================================
-  // 模块5: 保存功能 (SaveModule)
+  // 模块6: 保存功能 (SaveModule)
   // ============================================================
   const SaveModule = (function () {
 
@@ -728,8 +727,8 @@
 
       // 评论（文本汇总）
       if (comments?.length > 0) {
-        const commentText = comments.map(c =>
-          `#${c.idx} @${c.handle}${c.time ? ' · ' + UtilModule.formatDate(c.time) : ''}\n${c.text}`
+        const commentText = comments.map((c, i) =>
+          `#${c.idx ?? i + 1} @${c.handle}${c.time ? ' · ' + UtilModule.formatDate(c.time) : ''}\n${c.text}`
         ).join('\n\n---\n\n');
         fields[f('feishuFieldComments', '评论')] = commentText;
       }
@@ -861,7 +860,7 @@
   })();
 
   // ============================================================
-  // 模块6: 用户界面 (UIModule)
+  // 模块7: 用户界面 (UIModule)
   // ============================================================
   const UIModule = (function () {
     const injected = new WeakSet();
@@ -939,8 +938,6 @@
           }
         }, 350);
       }, true); // capture 阶段拦截，先于 X 的监听器执行
-
-      injected.add(el);
     }
 
     function processArticles() {

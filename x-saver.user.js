@@ -291,7 +291,7 @@
         .replace(/\s+/g, ' ')
         // 去掉首尾下划线和空格
         .replace(/^[_\s]+|[_\s]+$/g, '')
-        .substring(0, 80)
+        .substring(0, 100)
         .trim();
     }
     function extractTweetId(url) {
@@ -642,14 +642,29 @@
     }
 
     function toFileName(data) {
+      const LIMIT = 60;
       const raw = (data.text || data.handle || 'tweet')
         .replace(/https?:\/\/\S+/g, '')
         .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
         .replace(/[\u{2600}-\u{27BF}]/gu, '')
         .replace(/[\n\r]+/g, ' ')
-        .trim()
-        .substring(0, 40);
-      return UtilModule.sanitizeFileName(raw || data.handle || 'tweet');
+        .trim();
+
+      let title = raw;
+      if (raw.length > LIMIT) {
+        // 1. 优先在句末标点截断（中英文）
+        const seg = raw.substring(0, LIMIT);
+        const sentenceMatch = seg.match(/^([\s\S]*[。！？…\.!\?])/);
+        if (sentenceMatch && sentenceMatch[1].length >= LIMIT / 2) {
+          title = sentenceMatch[1].trim();
+        } else {
+          // 2. 其次在最后一个空格截断（英文词边界）
+          const lastSpace = seg.lastIndexOf(' ');
+          title = lastSpace >= LIMIT / 2 ? seg.substring(0, lastSpace) : seg;
+        }
+      }
+
+      return UtilModule.sanitizeFileName(title || data.handle || 'tweet');
     }
 
     return { toMarkdown, toFileName };

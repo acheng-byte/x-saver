@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X Saver · 推文保存工具
 // @namespace    https://github.com/acheng-byte
-// @version      0.0.7
+// @version      0.0.8
 // @description  X平台一键保存推文到Obsidian+飞书 · 总开关/投票/引用/长文/标签多选/评论/视频URL
 // @author       阿成
 // @homepageURL  https://github.com/acheng-byte
@@ -210,7 +210,7 @@
       feishuFieldVideo:     '视频URL',
       feishuFieldTags:      '标签',
       feishuFieldComments:  '评论',
-      feishuFieldMd:        '附件',
+      feishuFieldMd:        '笔记文件',
       feishuUploadMd:       false,   // 是否上传 MD 文档为附件
 
       // 媒体
@@ -741,7 +741,7 @@
       fields[f('feishuFieldAuthor',    '作者')]    = data.displayName || `@${data.handle}`;
       fields[f('feishuFieldHandle',    '账号')]    = `@${data.handle}`;
       if (data.tweetTime) fields[f('feishuFieldTime', '发布时间')] = new Date(data.tweetTime).getTime();
-      fields[f('feishuFieldSavedDate', '保存日期')] = UtilModule.getBeijingTime();
+      fields[f('feishuFieldSavedDate', '保存日期')] = Date.now();
 
       // 图片 URL（换行分隔）
       if (data.images.length > 0) fields[f('feishuFieldImages', '图片URL')] = data.images.join('\n');
@@ -797,7 +797,7 @@
             try {
               const d = JSON.parse(r.responseText);
               d.code === 0
-                ? resolve(d.data?.record?.record_id || existingId)
+                ? resolve(d.data?.record?.record_id || existingId || null)
                 : reject(new Error(`飞书: ${d.msg}`));
             } catch (e) { reject(e); }
           },
@@ -1072,7 +1072,7 @@
 
       panel.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:17px;font-weight:700;">X Saver v0.0.7</span>
+          <span style="font-size:17px;font-weight:700;">X Saver v0.0.8</span>
           <span id="xs-close" style="cursor:pointer;font-size:24px;opacity:.5;line-height:1;">×</span>
         </div>
         ${!enabled ? `<div class="xs-disabled-banner">⚠️ 脚本已禁用，点击"总开关"重新启用</div>` : ''}
@@ -1354,7 +1354,7 @@
       injectStyles();
       setTimeout(processArticles, 1200);
       observeDOM();
-      LogModule.log('info', 'X Saver v0.0.7 已启动');
+      LogModule.log('info', 'X Saver v0.0.8 已启动');
     }
 
     return { init, showSettings };

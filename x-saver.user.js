@@ -435,7 +435,7 @@
     function quoteMd(quote) {
       if (!quote) return '';
       let md = `\n> **[@${quote.handle}](https://x.com/${quote.handle})**\n`;
-      if (quote.text) quote.text.split('\n').forEach(l => { md += `> ${l}\n`; });
+      if (quote.text) quote.text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)').split('\n').forEach(l => { md += `> ${l}\n`; });
       if (quote.url) md += `>\n> [查看原推](${quote.url})\n`;
       return md + '\n';
     }
@@ -555,10 +555,8 @@
         .replace(/[\u{2600}-\u{27BF}]/gu, '')
         .replace(/[\n\r]+/g, ' ')
         .trim()
-        .substring(0, 20);
-      const prefix = `${d} @${data.handle || 'unknown'} `;
-      const snippet = raw.substring(0, Math.max(0, 50 - prefix.length));
-      return UtilModule.sanitizeFileName(prefix + snippet);
+        .substring(0, 40);
+      return UtilModule.sanitizeFileName(raw || data.handle || 'tweet');
     }
 
     return { toMarkdown, toFileName };

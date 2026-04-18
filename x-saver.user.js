@@ -215,6 +215,7 @@
       // 媒体
       imageMode:         'link',   // link | download
       videoMode:         'iframe', // iframe | link
+      iframeHeight:      '480',    // iframe 高度（px），留空则自适应
       serverEndpoint:    'https://media.acheng.eu.cc/download',
       serverToken:       '36fce70c0e32402564b7aa404ac09f6b867305ac859a4334bf1696fc238944d1',
       serverMediaFolder: 'X媒体',
@@ -516,9 +517,10 @@
   // ============================================================
   const ConvertModule = (function () {
 
-    function tweetIframe(tweetId) {
+    function tweetIframe(tweetId, cfg) {
       const src = `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&dnt=true`;
-      return `\n<iframe src="${src}" style="border:none;width:100%;aspect-ratio:16/9;border-radius:12px;" allowfullscreen loading="lazy"></iframe>\n`;
+      const h = parseInt(cfg?.iframeHeight) || 480;
+      return `\n<iframe src="${src}" style="border:none;width:100%;height:${h}px;border-radius:12px;" allowfullscreen loading="lazy"></iframe>\n`;
     }
 
     // 投票 → Markdown 表格
@@ -605,7 +607,7 @@
       // 视频
       if (data.hasVideo) {
         if (cfg.videoMode === 'iframe' && data.tweetId) {
-          md += tweetIframe(data.tweetId) + '\n';
+          md += tweetIframe(data.tweetId, cfg) + '\n';
         } else {
           md += `> 🎬 [点击查看视频](${data.tweetUrl})\n\n`;
         }
@@ -1038,6 +1040,7 @@
           <div class="xs-sec">媒体</div>
           ${S('图片模式','imageMode',[['link','外链（pbs.twimg.com）'],['download','下载到服务器']])}
           ${S('视频模式','videoMode',[['iframe','iframe 嵌入（Obsidian 阅读模式可播放）'],['link','仅存链接/推文URL']],'使用 platform.twitter.com/embed 嵌入，无需下载')}
+          ${T('iframe 高度(px)','iframeHeight','number','480','横版视频约480，竖版视频约850')}
           <div class="xs-sec">服务器配置（图片下载模式）</div>
           ${T('端点 URL','serverEndpoint','text','https://your.server/x-media')}
           ${T('Token','serverToken','password')}

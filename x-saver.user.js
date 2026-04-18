@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X Saver · 推文保存工具
 // @namespace    https://github.com/acheng-byte
-// @version      0.0.6
+// @version      0.0.7
 // @description  X平台一键保存推文到Obsidian+飞书 · 总开关/投票/引用/长文/标签多选/评论/视频URL
 // @author       阿成
 // @homepageURL  https://github.com/acheng-byte
@@ -38,8 +38,7 @@
     const LOG_KEY = 'xs_log', HIST_KEY = 'xs_history';
 
     function _bjTime() {
-      const now = new Date();
-      const bj  = new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
+      const bj = new Date(Date.now() + 8 * 3600000);
       return bj.toISOString().replace('T', ' ').substring(0, 19);
     }
     function _getArr(key) {
@@ -211,7 +210,7 @@
       feishuFieldVideo:     '视频URL',
       feishuFieldTags:      '标签',
       feishuFieldComments:  '评论',
-      feishuFieldMd:        '笔记文件',
+      feishuFieldMd:        '附件',
       feishuUploadMd:       false,   // 是否上传 MD 文档为附件
 
       // 媒体
@@ -276,8 +275,7 @@
   // ============================================================
   const UtilModule = (function () {
     function getBeijingTime() {
-      const now = new Date();
-      const bj  = new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
+      const bj = new Date(Date.now() + 8 * 3600000);
       return bj.toISOString().replace('T', ' ').substring(0, 19);
     }
     function sanitizeFileName(name) {
@@ -302,8 +300,7 @@
     }
     function formatDate(iso) {
       if (!iso) return '';
-      const d  = new Date(iso);
-      const bj = new Date(d.getTime() + (d.getTimezoneOffset() + 480) * 60000);
+      const bj = new Date(new Date(iso).getTime() + 8 * 3600000);
       return bj.toISOString().replace('T', ' ').substring(0, 16);
     }
 
@@ -646,10 +643,7 @@
     function toFileName(data) {
       // 格式：YYYY-MM-DD @handle（北京时间发布日期 + 作者账号）
       const d = data.tweetTime
-        ? (() => {
-            const dt = new Date(data.tweetTime);
-            return new Date(dt.getTime() + (dt.getTimezoneOffset() + 480) * 60000).toISOString().substring(0, 10);
-          })()
+        ? new Date(new Date(data.tweetTime).getTime() + 8 * 3600000).toISOString().substring(0, 10)
         : UtilModule.getBeijingTime().substring(0, 10);
       const handle = data.handle || 'unknown';
       return UtilModule.sanitizeFileName(`${d} @${handle}`);
@@ -747,7 +741,7 @@
       fields[f('feishuFieldAuthor',    '作者')]    = data.displayName || `@${data.handle}`;
       fields[f('feishuFieldHandle',    '账号')]    = `@${data.handle}`;
       if (data.tweetTime) fields[f('feishuFieldTime', '发布时间')] = new Date(data.tweetTime).getTime();
-      fields[f('feishuFieldSavedDate', '保存日期')] = Date.now();
+      fields[f('feishuFieldSavedDate', '保存日期')] = UtilModule.getBeijingTime();
 
       // 图片 URL（换行分隔）
       if (data.images.length > 0) fields[f('feishuFieldImages', '图片URL')] = data.images.join('\n');
@@ -1078,7 +1072,7 @@
 
       panel.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:17px;font-weight:700;">X Saver v0.0.6</span>
+          <span style="font-size:17px;font-weight:700;">X Saver v0.0.7</span>
           <span id="xs-close" style="cursor:pointer;font-size:24px;opacity:.5;line-height:1;">×</span>
         </div>
         ${!enabled ? `<div class="xs-disabled-banner">⚠️ 脚本已禁用，点击"总开关"重新启用</div>` : ''}
@@ -1360,7 +1354,7 @@
       injectStyles();
       setTimeout(processArticles, 1200);
       observeDOM();
-      LogModule.log('info', 'X Saver v0.0.6 已启动');
+      LogModule.log('info', 'X Saver v0.0.7 已启动');
     }
 
     return { init, showSettings };

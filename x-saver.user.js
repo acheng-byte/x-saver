@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         X Saver · 推文保存工具
 // @namespace    https://github.com/acheng-byte
-// @version      0.0.3
+// @version      0.0.4
 // @description  X平台一键保存推文到Obsidian+飞书 · 总开关/投票/引用/长文/标签多选/评论/视频URL
 // @author       阿成
 // @homepageURL  https://github.com/acheng-byte
@@ -102,10 +102,10 @@
 
       // 飞书
       feishuApiDomain: 'feishu',
-      feishuAppId:     '',
-      feishuAppSecret: '',
-      feishuAppToken:  '',
-      feishuTableId:   '',
+      feishuAppId:     'cli_a90e366e9c39dcd4',
+      feishuAppSecret: 'UG5SBUn3M0TLlRvjoSGtcfCIot6Do2AT',
+      feishuAppToken:  'GevWbDWu0aQTIYsm8e8cT2khnId',
+      feishuTableId:   'tbl7Xw9AaxCpqJmZ',
       // 飞书字段名映射
       feishuFieldContent:   '内容',
       feishuFieldUrl:       '链接',
@@ -121,8 +121,8 @@
       // 媒体
       imageMode:         'link',   // link | download
       videoMode:         'iframe', // iframe | link
-      serverEndpoint:    '',
-      serverToken:       '',
+      serverEndpoint:    'https://media.acheng.eu.cc/download',
+      serverToken:       '36fce70c0e32402564b7aa404ac09f6b867305ac859a4334bf1696fc238944d1',
       serverMediaFolder: 'X媒体',
 
       // 评论
@@ -613,8 +613,8 @@
       const fields = {};
       fields[f('feishuFieldContent',   '内容')]    = markdown;
       fields[f('feishuFieldUrl',       '链接')]    = data.tweetUrl;
-      // 作者 = 显示名（单选字段），账号 = @handle（文本字段）
-      fields[f('feishuFieldAuthor',    '作者')]    = { text: data.displayName || `@${data.handle}` };
+      // 作者 = 显示名（单选字段，飞书单选传字符串），账号 = @handle（文本字段）
+      fields[f('feishuFieldAuthor',    '作者')]    = data.displayName || `@${data.handle}`;
       fields[f('feishuFieldHandle',    '账号')]    = `@${data.handle}`;
       if (data.tweetTime) fields[f('feishuFieldTime', '发布时间')] = new Date(data.tweetTime).getTime();
       fields[f('feishuFieldSavedDate', '保存日期')] = Date.now();
@@ -799,36 +799,36 @@
     }
 
     function injectSaveButton(el) {
-      const bookmarkBtn = el.querySelector('[data-testid="bookmark"]');
-      // 用 data 属性标记已挂钩的 bookmarkBtn，处理 X 重新渲染同一 article 的情况
-      if (!bookmarkBtn || bookmarkBtn.dataset.xsHooked) return;
-      bookmarkBtn.dataset.xsHooked = '1';
+      // 拦截点赞按钮（更易于在手机端找到）：单击=保存，双击=X原生点赞
+      const likeBtn = el.querySelector('[data-testid="like"]');
+      if (!likeBtn || likeBtn.dataset.xsHooked) return;
+      likeBtn.dataset.xsHooked = '1';
       injected.add(el);
 
       let timer      = null;
       let ignoreNext = false;
 
-      bookmarkBtn.addEventListener('click', async e => {
-        // 第二次合成点击（放行给 X 原生处理）
+      likeBtn.addEventListener('click', async e => {
+        // 第二次合成点击（放行给 X 原生点赞）
         if (ignoreNext) { ignoreNext = false; return; }
 
         e.stopPropagation();
         e.preventDefault();
 
         if (timer) {
-          // 双击：取消保存计时器，放行给 X 原生收藏
+          // 双击：取消保存，放行给 X 原生点赞
           clearTimeout(timer); timer = null;
           ignoreNext = true;
-          bookmarkBtn.click();
-          UtilModule.showNotification('已添加到 X 收藏', 'info');
+          likeBtn.click();
+          UtilModule.showNotification('已点赞 ❤️', 'info');
           return;
         }
 
         // 单击：350ms 后判定为保存操作
         timer = setTimeout(async () => {
           timer = null;
-          bookmarkBtn.style.opacity = '0.4';
-          setTimeout(() => (bookmarkBtn.style.opacity = ''), 1500);
+          likeBtn.style.opacity = '0.4';
+          setTimeout(() => (likeBtn.style.opacity = ''), 1500);
           UtilModule.showNotification('正在保存...', 'info');
           try { await SaveModule.save(el); }
           catch (err) {
@@ -900,7 +900,7 @@
 
       panel.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:17px;font-weight:700;">X Saver v0.0.3</span>
+          <span style="font-size:17px;font-weight:700;">X Saver v0.0.4</span>
           <span id="xs-close" style="cursor:pointer;font-size:24px;opacity:.5;line-height:1;">×</span>
         </div>
         ${!enabled ? `<div class="xs-disabled-banner">⚠️ 脚本已禁用，点击"总开关"重新启用</div>` : ''}

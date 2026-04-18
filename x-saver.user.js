@@ -1038,13 +1038,14 @@
           ${C('保存评论（仅在单推文页有效）','saveComments','默认关闭，需在 x.com/user/status/xxx 页面使用')}
           ${T('保存条数','commentCount','number','100')}
           <div class="xs-sec">媒体</div>
-          ${S('图片模式','imageMode',[['link','外链（pbs.twimg.com）'],['download','下载到服务器']])}
+          ${S('图片模式','imageMode',[['link','外链 — 直接引用 X CDN，无需服务器'],['download','服务器备份 — 下载到你的服务器（见下方配置）']],'外链模式：笔记引用 pbs.twimg.com 原图，X 删图后失效。服务器备份：图片先保存到你的服务器，再由服务器 URL 引用，永久有效，但需要自建服务端')}
           ${S('视频模式','videoMode',[['iframe','iframe 嵌入（Obsidian 阅读模式可播放）'],['link','仅存链接/推文URL']],'使用 platform.twitter.com/embed 嵌入，无需下载')}
           ${T('iframe 高度(px)','iframeHeight','number','480','横版视频约480，竖版视频约850')}
-          <div class="xs-sec">服务器配置（图片下载模式）</div>
-          ${T('端点 URL','serverEndpoint','text','https://your.server/x-media')}
-          ${T('Token','serverToken','password')}
-          ${T('媒体子文件夹','serverMediaFolder','text','X媒体')}
+          <div class="xs-sec">服务器配置（仅「服务器备份」模式需要填写）</div>
+          <div class="xs-tip" style="margin-bottom:8px;">图片将 POST 到此端点，由服务器下载并存储，笔记中引用服务器 URL。图片保存在<strong>服务器</strong>上，不是本地电脑。</div>
+          ${T('端点 URL','serverEndpoint','text','https://your.server/download','服务端接收下载请求的地址')}
+          ${T('Token','serverToken','password','','用于验证请求合法性的密钥')}
+          ${T('媒体子文件夹','serverMediaFolder','text','X媒体','服务器上的存储子目录名称')}
           <div class="xs-sec">配置管理</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
             <button class="xs-btn xs-sec2" id="xs-export">导出配置</button>
